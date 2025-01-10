@@ -9,7 +9,7 @@
 struct randv *auth_rand;
 struct triple *auth_triples;
 
-fp *delta;
+fp delta;
 
 void init_preprocess(char *file) {
   char *line = NULL;
@@ -39,6 +39,7 @@ void init_preprocess(char *file) {
       rand_value->s = malloc(sizeof(struct share));
       rand_value->s->s = from(share);
       rand_value->s->s_mac = from(share_mac);
+      rand_value->is_value = 1;
       rand_value->value = from(val);
       auth_rand = rand_value;
     } else if (ret == 3) {
@@ -48,7 +49,8 @@ void init_preprocess(char *file) {
       rand_value->s = malloc(sizeof(struct share));
       rand_value->s->s = from(share);
       rand_value->s->s_mac = from(share_mac);
-      rand_value->value = NULL;
+      rand_value->is_value = 0;
+      rand_value->value = 0;
       auth_rand = rand_value;
     } else {
       uint64_t share_a;

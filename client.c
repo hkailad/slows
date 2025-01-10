@@ -18,7 +18,7 @@ extern struct host *conns[1024]; // external connections to other parties
 extern int num_conns;            // number of total connections
 extern char *glob_name;          // global ident for this party
 
-extern fp *delta;
+extern fp delta;
 
 extern struct wires *g_wires; // circuit wires stored linearly (order matters!)
 
@@ -40,21 +40,20 @@ void initialize() {
 
   printf("\n --- PREPROCESSING --- \n\n");
 
-  printf("GLOBAL MAC SHARE: [%lu]\n", delta->val);
+  printf("GLOBAL MAC SHARE: [%lu]\n", delta);
 
   struct triple *t;
   for (t = auth_triples; t != NULL; t = t->next) {
-    printf("TRIPLE [a] = (%lu %lu) [b] = (%lu %lu) [c] = (%lu %lu)\n",
-           t->a->s->val, t->a->s_mac->val, t->b->s->val, t->b->s_mac->val,
-           t->ab->s->val, t->ab->s_mac->val);
+    printf("TRIPLE [a] = (%lu %lu) [b] = (%lu %lu) [c] = (%lu %lu)\n", t->a->s,
+           t->a->s_mac, t->b->s, t->b->s_mac, t->ab->s, t->ab->s_mac);
   }
 
   struct randv *r;
 
   for (r = auth_rand; r != NULL; r = r->next) {
-    printf("RAND [r] = (%lu %lu)", r->s->s->val, r->s->s_mac->val);
-    if (r->value != NULL) {
-      printf(" (r = %lu)\n", r->value->val);
+    printf("RAND [r] = (%lu %lu)", r->s->s, r->s->s_mac);
+    if (r->is_value != 0) {
+      printf(" (r = %lu)\n", r->value);
     } else {
       printf("\n");
     }
@@ -68,7 +67,7 @@ void initialize() {
     if (a->w->operation == 2) {
       printf("INPUT WIRE BY [%s] ", a->w->input_name);
       if (strcmp(a->w->input_name, glob_name) == 0) {
-        printf("(i = %lu)\n", a->w->val->val);
+        printf("(i = %lu)\n", a->w->val);
       } else {
         printf("\n");
       }
@@ -101,11 +100,11 @@ void wait_for_connections() {
   while (check_arr(is_ready, num_conns) == 0) {
     int numfds = 0;
     // send out a ping to all hosts, and wait 10 seconds for an ack
-    char pepega[4] = {'p', 'i', 'n', 'g'};
+    char pepega[5] = {'\x04', 'p', 'i', 'n', 'g'};
     for (int i = 0; i < num_conns; i++) {
       if ((is_ready[i] & 1) == 0) {
         printf("Pinging %s\n", conns[i]->name);
-        sendto(conns[i]->sockfd, pepega, 4, 0,
+        sendto(conns[i]->sockfd, pepega, 5, 0,
                (const struct sockaddr *)&conns[i]->conn,
                sizeof(conns[i]->conn));
         fds[numfds].fd = conns[i]->sockfd;
@@ -132,21 +131,21 @@ void wait_for_connections() {
             }
           }
 
-          unsigned char buf[4] = {0};
+          unsigned char buf[5] = {0};
           socklen_t len = sizeof(conns[connid]->conn);
-          recvfrom(fds[i].fd, buf, 4, 0,
+          recvfrom(fds[i].fd, buf, 5, 0,
                    (struct sockaddr *)&(conns[connid]->conn), &len);
 
-          if (buf[0] == 'p' && buf[1] == 'i' && buf[2] == 'n' &&
-              buf[3] == 'g') {
+          if (buf[0] == '\x04' && buf[1] == 'p' && buf[2] == 'i' &&
+              buf[3] == 'n' && buf[4] == 'g') {
             printf("Received ping from %s, acking\n", conns[connid]->name);
-            char omega[4] = {'a', 'c', 'k', 'n'};
-            sendto(fds[i].fd, omega, 4, 0,
+            char omega[5] = {'\x04', 'a', 'c', 'k', 'n'};
+            sendto(fds[i].fd, omega, 5, 0,
                    (const struct sockaddr *)&conns[connid]->conn,
                    sizeof(conns[connid]->conn));
             is_ready[connid] |= 2;
-          } else if (buf[0] == 'a' && buf[1] == 'c' && buf[2] == 'k' &&
-                     buf[3] == 'n') {
+          } else if (buf[0] == '\x04' && buf[1] == 'a' && buf[2] == 'c' &&
+                     buf[3] == 'k' && buf[4] == 'n') {
             printf("Received ack from %s\n", conns[connid]->name);
             is_ready[connid] |= 1;
           }

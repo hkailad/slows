@@ -3,7 +3,6 @@
 
 #include <netinet/in.h>
 
-// A connection.
 struct host {
   char *name;
   int sockfd;

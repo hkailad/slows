@@ -11,7 +11,7 @@ all:		client
 		$(CC) -c $(CFLAGS) $*.c
 
 client: $(OBJ)
-		$(CC) $(LIBS) -o slows $(OBJ)
+		$(CC) -o slows $(OBJ) $(LIBS)
 
 clean:
 		rm -f *.o slows

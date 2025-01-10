@@ -6,15 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-fp *packet_to_fp(packet *p) {
-  fp *f = malloc(sizeof(fp));
-  f->val = be64toh(((uint64_t *)p->data)[0]);
+fp packet_to_fp(packet *p) {
+  fp f = be64toh(((uint64_t *)p->data)[0]);
   return f;
 }
 
-packet *fp_to_packet(fp *elem) {
+packet *fp_to_packet(fp elem) {
   uint64_t *buf = malloc(sizeof(char) * 8);
-  buf[0] = htobe64(elem->val);
+  buf[0] = htobe64(elem);
   packet *p = malloc(sizeof(packet));
   p->data = (uint8_t *)buf;
   p->len = 8;
@@ -51,9 +50,11 @@ packet *recv_broadcasts(struct host **conns, int num_conns) {
 
   for (int i = 0; i < num_conns; i++) {
     uint8_t *buf = malloc(sizeof(uint8_t) * 64);
-    socklen_t len = sizeof(conns[i]->conn);
-    recvfrom(conns[i]->sockfd, buf, 64, 0, (struct sockaddr *)&(conns[i]->conn),
-             &len);
+    do {
+      socklen_t len = sizeof(conns[i]->conn);
+      recvfrom(conns[i]->sockfd, buf, 64, 0, (struct sockaddr *)&(conns[i]->conn),
+               &len);
+    } while (memcmp(buf, "\x04ping", 5) == 0 || memcmp(buf, "\x04""ackn", 5) == 0);
     uint8_t size = buf[0];
     packets[i].data = (buf + 1);
     packets[i].len = size;
@@ -67,8 +68,10 @@ packet *recv_single_broadcast(struct host *con) {
   p->data = NULL;
   p->len = 0;
   uint8_t *buf = malloc(sizeof(uint8_t) * 64);
-  socklen_t len = sizeof(con->conn);
-  recvfrom(con->sockfd, buf, 64, 0, (struct sockaddr *)&(con->conn), &len);
+  do {
+    socklen_t len = sizeof(con->conn);
+    recvfrom(con->sockfd, buf, 64, 0, (struct sockaddr *)&(con->conn), &len);
+  } while (memcmp(buf, "\x04ping", 5) == 0 || memcmp(buf, "\x04""ackn", 5) == 0);
   uint8_t size = buf[0];
   p->data = (buf + 1);
   p->len = size;
